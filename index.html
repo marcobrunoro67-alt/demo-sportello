@@ -44,7 +44,7 @@ p{margin:0}
 .path b{font:600 18px/1.25 var(--f-d);display:block}
 .path span.ic{flex:none;width:40px;height:40px;border-radius:50%;background:var(--soft);color:var(--accent);display:grid;place-items:center;font:600 18px var(--f-d)}
 label{display:grid;gap:6px;font-weight:700;font-size:16px}
-input,textarea{font:inherit;color:var(--fg);background:var(--bg);border:2px solid var(--line);border-radius:8px;padding:12px;width:100%}
+input,textarea{font:inherit;font-weight:400;color:var(--fg);background:var(--bg);border:2px solid var(--line);border-radius:8px;padding:12px;width:100%}
 textarea{min-height:130px;resize:vertical}
 .ex{font-weight:400;color:var(--muted);font-size:14px}
 button.main{font:600 18px var(--f-d);background:var(--accent);color:var(--accent-fg);border:0;border-radius:10px;padding:16px 20px;cursor:pointer;min-height:54px}
@@ -63,6 +63,11 @@ ul.l{margin:0;padding-left:22px;display:grid;gap:6px}
 .qr{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center}
 #qrbox{background:#fff;padding:10px;border-radius:8px;line-height:0}
 @media (max-width:420px){.qr{grid-template-columns:1fr;justify-items:start}}
+.paper{background:#fff;color:#1a1a1a;border:1px solid #bbb;border-radius:4px;padding:14px;font:14px/1.6 ui-monospace,Consolas,monospace;transform:rotate(-1deg);box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.paper b{font-weight:700}
+.cf{padding:0 4px;border-radius:2px;transition:background .2s}
+.cf.cov{background:#000;color:#000}
+.shot{display:grid;gap:12px}
 .foot{font-size:14px;color:var(--muted)}
 [hidden]{display:none!important}
 </style>
@@ -121,9 +126,9 @@ ul.l{margin:0;padding-left:22px;display:grid;gap:6px}
 <script>
 const DEMO_URL=/^https?:/.test(location.href)?location.href.split("#")[0]:"";
 const P=[
- {k:"cap",ic:"1",t:"Capire una comunicazione ricevuta",
-  hint:"Incolla il testo della lettera o dell'avviso. Nella versione reale puoi anche fotografarlo.",
-  f:[{id:"t",l:"Testo della comunicazione",ta:1,v:"Avviso di pagamento n. 4821/2026. Si invita il contribuente al versamento di euro 187,40 relativo al servizio rifiuti, annualità 2026, entro il 16 dicembre 2026. In caso di mancato pagamento potranno essere applicate sanzioni e interessi. Per informazioni: Ufficio Tributi."}],
+ {k:"cap",ic:"1",photo:1,t:"Capire una comunicazione ricevuta",
+  hint:"Fotografa la lettera o l'avviso, oppure scrivi o incolla il testo.",
+  f:[{id:"t",l:"Testo della comunicazione",ta:1,sample:1,v:"Avviso di pagamento n. 4821/2026. Si invita il contribuente al versamento di euro 187,40 relativo al servizio rifiuti, annualità 2026, entro il 16 dicembre 2026. In caso di mancato pagamento potranno essere applicate sanzioni e interessi. Per informazioni: Ufficio Tributi."}],
   title:"Che cosa ti è stato scritto",
   doc:"Che cos'è\nÈ un avviso che chiede di pagare 187,40 euro per il servizio rifiuti del 2026.\n\nCosa ti chiede\nDi versare l'importo indicato.\n\nEntro quando\nEntro il 16 dicembre 2026.\n\nSe non paghi\nL'avviso dice che possono essere applicate sanzioni e interessi.\n\nCosa puoi fare\n1. Controlla che nome, indirizzo e anno siano giusti.\n2. Se i dati non corrispondono, scrivi all'Ufficio Tributi prima della scadenza.\n3. Se l'importo ti sembra corretto, paga con le modalità indicate nell'avviso.",
   chk:["L'importo e l'anno: confrontali con l'avviso originale.","Se hai già pagato: tieni la ricevuta e segnalalo all'ufficio.","Le modalità di pagamento: non sono nel testo che hai incollato."],
@@ -149,7 +154,18 @@ let cur=null;
 P.forEach((p,i)=>$("paths").insertAdjacentHTML("beforeend",`<button class="path" data-i="${i}"><span class="ic">${p.ic}</span><span><b>${p.t}</b></span></button>`));
 $("paths").addEventListener("click",e=>{const b=e.target.closest(".path");if(!b)return;cur=P[+b.dataset.i];
   $("h-form").textContent=cur.t;$("fhint").textContent=cur.hint;
-  $("fields").innerHTML=cur.f.map(f=>`<label for="f_${f.id}">${f.l} <span class="ex">(esempio)</span>${f.ta?`<textarea id="f_${f.id}">${f.v}</textarea>`:`<input id="f_${f.id}" value="${f.v}">`}</label>`).join("");
+  const photo=cur.photo?`<div class="shot"><button class="sec" type="button" id="snap">Fotografa il documento</button>
+    <p class="muted">Consigli: foglio intero, buona luce, niente riflessi. In questa dimostrazione la foto è un esempio e non si usa la tua fotocamera.</p>
+    <div id="shot" class="shot" hidden>
+      <div class="paper" aria-label="Foto di esempio del documento"><b>COMUNE DI ESEMPIO - Ufficio Tributi</b><br>Avviso di pagamento n. 4821/2026<br>Intestatario: [nome e cognome]<br>Codice fiscale: <span class="cf" id="cf">XXXXXX00X00X000X</span><br>Servizio rifiuti, anno 2026<br>Importo da versare: euro 187,40<br>Scadenza: 16 dicembre 2026</div>
+      <div class="notice"><strong>Prima di inviare:</strong> copri i dati che non servono, come il codice fiscale. Nel servizio reale lo fai con il dito direttamente sulla foto.<br><button class="sec" type="button" id="cover" style="margin-top:10px">Copri il codice fiscale</button></div>
+      <div class="notice"><strong>Ho letto questo testo.</strong> Controlla che sia giusto e correggilo se serve, poi prosegui.</div>
+    </div></div>`:"";
+  $("fields").innerHTML=photo+cur.f.map(f=>`<label for="f_${f.id}">${f.l} <span class="ex">${f.sample?"(si compila con la foto)":"(esempio)"}</span>${f.ta?`<textarea id="f_${f.id}">${f.sample?"":f.v}</textarea>`:`<input id="f_${f.id}" value="${f.v}">`}</label>`).join("");
+  if(cur.photo){
+    $("snap").onclick=()=>{$("shot").hidden=false;$("snap").textContent="Fotografa di nuovo";$("f_t").value=cur.f[0].v;};
+    $("cover").onclick=()=>{const c=$("cf").classList.toggle("cov");$("cover").textContent=c?"Scopri il codice fiscale":"Copri il codice fiscale";};
+  }
   show("form");window.scrollTo({top:0});});
 $("back1").onclick=()=>show("home");
 $("again").onclick=()=>{show("home");window.scrollTo({top:0});};
